@@ -22,9 +22,13 @@ public:
 
     // Deserializes the JSON string into a C++ Class object
     static {class_name} deserialize(const std::string& json_str) {{
-        auto j = json::parse(json_str);
         {class_name} obj;
+        try{{
+        auto j = json::parse(json_str);
         {deserialize_optional_fields}
+        }} catch (const json::exception& e) {{
+            std::cerr << "Error parsing JSON: " << e.what() << std::endl;
+        }}
         return obj;
     }}
 
@@ -34,35 +38,56 @@ public:
 '''
 
 def generate_field_code(field):
-    cpp_type = map_type(field['type'])
+    cpp_type = map_type(field)
     field_name = sanitize_name(field['name'])
-    return f"std::optional<{cpp_type}> {field_name}"
+    return f"std::optional<{cpp_type}> {field_name};"
 
 def generate_serialization_code(field):
     field_name = sanitize_name(field['name'])
-    return f'''if (this->{field_name}) j["{field_name}"] = *this->{field_name};'''
+    if field.get("is_array", False):
+        return f'''if (this->{field_name}) {{\n\t\tj["{field_name}"] = json::array();\n\t\tfor (const auto& item : *this->{field_name}) {{\n\t\t\tj["{field_name}"].emplace_back(item);\n\t\t}}\n\t}}'''
+    else:
+        return f'''if (this->{field_name}) j["{field_name}"] = *this->{field_name};'''
 
 def generate_deserialization_code(field):
     field_name = sanitize_name(field['name'])
-    return f'''if (j.contains("{field_name}") obj.{field_name} = j.at("{field_name}").get<std::optional<{map_type(field['type'])}>>();'''
+    # Correct the type mapping for array elements
+    cpp_type = map_type(field) if not field.get("is_array", False) else f"std::vector<{map_type({'type': field['type'], 'is_array': False})}>"
+    if field.get("is_array", False):
+        # Fix the handling of map_type for array fields
+        return f'''if (j.contains("{field_name}")) {{\n\t\tobj.{field_name} = j["{field_name}"].get<std::optional<{cpp_type}>>();\n\t}}'''
+    else:
+        # Now correctly closes the if statement
+        return f'''if (j.contains("{field_name}")) {{ obj.{field_name} = j.at("{field_name}").get<std::optional<{cpp_type}>>(); }}'''
+
 
 def generate_getter_setter_code(field):
-    cpp_type = f"std::optional<{map_type(field['type'])}>"
+    cpp_type = map_type(field)
+    optional_cpp_type = f"std::optional<{cpp_type}>"
     field_name = sanitize_name(field['name'])
     capitalized_name = field_name.capitalize()
-    getter = f'''{cpp_type} get{capitalized_name}() const {{ return {field_name}; }}'''
-    setter = f'''void set{capitalized_name}(const {cpp_type}& value) {{ {field_name} = value; }}'''
-    return getter + "\n    " + setter
 
-def map_type(json_type):
-    return {
+    is_scalar_type = field['type'] in ["int", "float", "bool", "string"]
+    setter_argument_type = cpp_type if is_scalar_type else f"const {cpp_type}&"
+
+    getter = f'''const {optional_cpp_type}& get{capitalized_name}() const {{ return {field_name}; }}'''
+
+    setter = f'''void set{capitalized_name}({setter_argument_type} value) {{ {field_name} = value; }}'''
+    return getter + "\n\t" + setter
+
+def map_type(field):
+    basic_type = {
         "int": "int",
         "float": "float",
+        "bool": "bool",
         "string": "std::string"
-
         # Add more types here as needed
+    }.get(field['type'], "void*") # Default to void if the type is not found
 
-    }.get(json_type, "void*") # Default to void if the type is not found
+    if field.get("is_array", False):
+        return f"std::vector<{basic_type}>"
+    else:
+        return basic_type
 
 def sanitize_name(name):
     cpp_keywords = ["class", "int", "float", "double", "char", "return", "private", "public", "protected", "new", "delete", "void"]
