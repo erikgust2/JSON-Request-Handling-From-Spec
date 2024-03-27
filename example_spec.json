@@ -1,0 +1,8 @@
+{
+    "class_name": "requestY",
+    "fields": [
+        {"name": "A", "type": "int"},
+        {"name": "B", "type": "string"},
+        {"name": "C", "type": "float"}
+    ]
+}
