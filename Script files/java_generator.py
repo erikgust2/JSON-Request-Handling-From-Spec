@@ -100,7 +100,7 @@ def generate_code_from_spec(spec):
         getters_and_setters=getters_setters
     )
 
-    java_file_name = f"{spec['class_name']}.java"
+    java_file_name = f"../Output/Java/{spec['class_name']}.java"
 
     with open(java_file_name, 'w') as file:
         file.write(java_class_code)
@@ -109,5 +109,5 @@ def generate_code_from_spec(spec):
 
 
 if __name__ == "__main__":
-    spec = load_specification("example_spec.json")
+    spec = load_specification("../Specs/example_spec.json")
     generate_code_from_spec(spec)

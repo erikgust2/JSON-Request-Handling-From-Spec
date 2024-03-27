@@ -118,7 +118,7 @@ def generate_code_from_spec(spec):
         getters_and_setters=getters_setters
     )
 
-    cpp_file_name = f"{spec['class_name'].lower()}.cpp"
+    cpp_file_name = f"../Output/C++/{spec['class_name'].lower()}.cpp"
 
     with open(cpp_file_name, 'w') as file:
         file.write(cpp_class_code)
@@ -126,5 +126,5 @@ def generate_code_from_spec(spec):
     print("Done! Check the generated code in the file: ", cpp_file_name)
 
 if __name__ == "__main__":
-    spec = load_specification("example_spec.json")
+    spec = load_specification("../Specs/example_spec.json")
     generate_code_from_spec(spec)

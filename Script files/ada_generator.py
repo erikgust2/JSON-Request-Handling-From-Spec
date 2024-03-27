@@ -99,8 +99,8 @@ def generate_code_from_spec(spec):
         deserialization_fields=deserialization_fields
     )
 
-    spec_file_name = f"{spec['package_name']}.ads"
-    body_file_name = f"{spec['package_name']}.adb"
+    spec_file_name = f"../Output/Ada/{spec['package_name']}.ads"
+    body_file_name = f"../Output/Ada/{spec['package_name']}.adb"
 
     with open(spec_file_name, 'w') as spec_file:
         spec_file.write(ada_spec_code)
@@ -112,5 +112,5 @@ def generate_code_from_spec(spec):
     print(f"Check the generated package body in the file: {body_file_name}")
 
 if __name__ == "__main__":
-    spec = load_specification("example_spec.json")
+    spec = load_specification("../Specs/example_spec.json")
     generate_code_from_spec(spec)
