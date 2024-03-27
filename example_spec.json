@@ -1,5 +1,6 @@
 {
-    "class_name": "requestY",
+    "class_name": "request",
+    "package_name": "example",
     "fields": [
         {"name": "A", "type": "int"},
         {"name": "B", "type": "string"},

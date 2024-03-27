@@ -4,7 +4,7 @@
 #include <optional>
 using json = nlohmann::json;
 
-class requestY {
+class request {
 private:
     std::optional<int> A;
 	std::optional<std::string> B;
@@ -12,7 +12,7 @@ private:
 	std::optional<std::vector<bool>> D;
 
 public:
-    requestY() = default; // Default constructor
+    request() = default; // Default constructor
 
     // Serializes the C++ Class object into a JSON string
     std::string serialize() const {
@@ -30,8 +30,8 @@ public:
     }
 
     // Deserializes the JSON string into a C++ Class object
-    static requestY deserialize(const std::string& json_str) {
-        requestY obj;
+    static request deserialize(const std::string& json_str) {
+        request obj;
         try{
         auto j = json::parse(json_str);
         if (j.contains("A")) { obj.A = j.at("A").get<std::optional<int>>(); }

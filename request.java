@@ -5,14 +5,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
-public class requestY {
+public class request {
     private static final ObjectMapper mapper = new ObjectMapper();
     private Optional<Integer> A = Optional.empty();
     private Optional<String> B = Optional.empty();
     private Optional<Float> C = Optional.empty();
     private List<Boolean> D = new ArrayList<>();
 
-    public requestY() {} // Default constructor
+    public request() {} // Default constructor
 
     // Serializes the Java class object into a JSON string
     public String serialize() {
@@ -25,9 +25,9 @@ public class requestY {
     }
 
     // Deserializes the JSON string into a Java class object
-    public static requestY deserialize(String jsonStr) {
+    public static request deserialize(String jsonStr) {
         try {
-            return mapper.readValue(jsonStr, requestY.class);
+            return mapper.readValue(jsonStr, request.class);
         } catch (IOException e) {
             e.printStackTrace();
             return null;
