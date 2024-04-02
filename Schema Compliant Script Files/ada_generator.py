@@ -8,14 +8,18 @@ package {package_name} is
 
    {enum_definitions}
 
-   -- Public subprograms including getters, setters, and serialization/deserialization functions
+   function To_String (Value : tags) return String;
+   function To_tags (Value : String) return tags;
+
    {public_subprograms}
 
    function To_JSON (Self : {class_name}) return GNATCOLL.JSON.JSON_Value'Class;
    procedure From_JSON (Self : out {class_name}; J : GNATCOLL.JSON.JSON_Value'Class);
 
 private
-   {private_types}
+   type {class_name} is tagged record
+      {private_fields}
+   end record;
 
 end {package_name};
 '''
@@ -25,6 +29,8 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with GNATCOLL.JSON; use GNATCOLL.JSON;
 
 package body {package_name} is
+
+   {enum_conversion_implementations}
 
    {body_subprograms}
 
@@ -81,6 +87,32 @@ def generate_body_subprograms(class_name, fields, enums):
    end Set_{field_name};
         ''')
     return '\n'.join(subprograms)
+
+def generate_enum_conversion_functions(enums):
+    to_string_functions = ""
+    to_enum_functions = ""
+    for enum_name, values in enums.items():
+        to_string_cases = "\n      ".join([f'when {val} => return "{val}";' for val in values])
+        to_enum_cases = "\n      ".join([f'when "{val}" => return {val};' for val in values])
+        to_string_functions += f'''
+   function To_String (Value : {enum_name}) return String is
+   begin
+      case Value is
+         {to_string_cases}
+      end case;
+   end To_String;
+        '''
+        to_enum_functions += f'''
+   function To_{enum_name} (Value : String) return {enum_name} is
+   begin
+      case Value is
+         {to_enum_cases}
+         when others => raise Constraint_Error with "Invalid enumeration string: " & Value;
+      end case;
+   end To_{enum_name};
+        '''
+    return to_string_functions.strip(), to_enum_functions.strip()
+
 
 def generate_serialization_subprograms(class_name, fields):
     serialization_procedures = f'''
@@ -147,26 +179,31 @@ def generate_code_from_spec(spec):
 
     # Generate Ada package specification and body components
     enum_definitions = generate_enum_definitions(enums)
-    private_types = '\n   '.join([generate_field_declaration(f[0], f[1], required_fields) for f in fields])
+    private_fields = '\n      '.join([generate_field_declaration(f[0], f[1], required_fields) for f in fields])
     public_subprograms = generate_public_subprograms(spec['class_name'], fields, enums)
     body_subprograms = generate_body_subprograms(spec['class_name'], fields, enums)
 
-    serialization_code = generate_serialization_subprograms(spec['class_name'], [(name, defn) for name, defn in spec['properties'].items()])
-    deserialization_code = generate_deserialization_subprograms(spec['class_name'], [(name, defn) for name, defn in spec['properties'].items()])
-
+    # Generate serialization and deserialization subprograms
+    serialization_code = generate_serialization_subprograms(spec['class_name'], fields)
+    deserialization_code = generate_deserialization_subprograms(spec['class_name'], fields)
     body_subprograms += serialization_code + deserialization_code
 
-    # Fill in templates
+    # Generate enum conversion functions
+    to_string_functions, to_enum_functions = generate_enum_conversion_functions(enums)
+    enum_conversion_implementations = to_string_functions + '\n\n' + to_enum_functions
+
+    # Correctly use 'private_fields' as the placeholder in the template and pass it in the format call
     ads_code = ads_template.format(
         package_name=spec['package_name'],
         class_name=spec['class_name'],
         enum_definitions=enum_definitions,
         public_subprograms=public_subprograms,
-        private_types=private_types
+        private_fields=private_fields  # Corrected placeholder name here
     )
 
     adb_code = adb_template.format(
         package_name=spec['package_name'],
+        enum_conversion_implementations=enum_conversion_implementations,
         body_subprograms=body_subprograms
     )
 
@@ -182,11 +219,11 @@ if __name__ == "__main__":
     ads_code, adb_code = generate_code_from_spec(spec)
     
     # Output Ada package specification
-    with open(f"{spec['package_name']}.ads", 'w') as ads_file:
+    with open(f"../Output/Ada/{spec['package_name']}.ads", 'w') as ads_file:
         ads_file.write(ads_code)
     
     # Output Ada package body
-    with open(f"{spec['package_name']}.adb", 'w') as adb_file:
+    with open(f"../Output/Ada/{spec['package_name']}.adb", 'w') as adb_file:
         adb_file.write(adb_code)
     
     print(f"Generated Ada code written to {spec['package_name']}.ads and {spec['package_name']}.adb")

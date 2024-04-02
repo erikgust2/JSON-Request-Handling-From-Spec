@@ -4,6 +4,25 @@ with GNATCOLL.JSON; use GNATCOLL.JSON;
 
 package body Store_Objects is
 
+   function To_String (Value : tags) return String is
+   begin
+      case Value is
+         when electronics => return "electronics";
+      when clothing => return "clothing";
+      when food => return "food";
+      end case;
+   end To_String;
+
+function To_tags (Value : String) return tags is
+   begin
+      case Value is
+         when "electronics" => return electronics;
+      when "clothing" => return clothing;
+      when "food" => return food;
+         when others => raise Constraint_Error with "Invalid enumeration string: " & Value;
+      end case;
+   end To_tags;
+
    
    function Get_id(Self : Product) return Integer is
    begin

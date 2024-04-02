@@ -7,7 +7,9 @@ package Store_Objects is
       clothing,
       food );
 
-   -- Public subprograms including getters, setters, and serialization/deserialization functions
+   function To_String (Value : tags) return String;
+   function To_tags (Value : String) return tags;
+
    function Get_id(Self : Product) return Integer;
    procedure Set_id(Self : in out Product; Value : Integer);
    function Get_name(Self : Product) return Unbounded_String;
@@ -24,11 +26,13 @@ package Store_Objects is
    procedure From_JSON (Self : out Product; J : GNATCOLL.JSON.JSON_Value'Class);
 
 private
-   id : Integer;
-   name : Unbounded_String;
-   price : Float;
-   manufacturers : GNATCOLL.JSON.JSON_Array;
-   in_stock : Boolean;
-   tag : tags;
+   type Product is tagged record
+      id : Integer;
+      name : Unbounded_String;
+      price : Float;
+      manufacturers : GNATCOLL.JSON.JSON_Array;
+      in_stock : Boolean;
+      tag : tags;
+   end record;
 
 end Store_Objects;
