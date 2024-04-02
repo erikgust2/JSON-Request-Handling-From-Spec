@@ -1,0 +1,46 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://example.com/product.schema.json",
+    
+    "class_name": "Product",
+    "package_name": "Store_Objects",
+    "description": "A product in the catalog. Example of how a request body could look like. Somewhat modded version of json-schema to support enums",
+    "type": "object",
+    
+    "properties": {
+        "id": {
+            "description": "The unique identifier for a product",
+            "type": "integer"
+        },
+        "name": {
+            "description": "Name of the product",
+            "type": "string"
+        },
+        "price": {
+            "description": "Price of the product",
+            "type": "number",
+            "exclusiveMinimum": 0
+        },
+        "manufacturers": {
+            "description": "The manufacturers of the product",
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+        },
+        "in_stock": {
+            "description": "Shows whether the product is currently in stock",
+            "type": "boolean"
+        },
+        "tag": {
+            "description": "A tag that shows the category of the product",
+            "type": "enum",
+            "enumname": "tags",
+            "enum": ["electronics", "clothing", "food"]
+        }  
+    },
+    "required": ["id", "name", "price", "in_stock"]
+  }
+  
