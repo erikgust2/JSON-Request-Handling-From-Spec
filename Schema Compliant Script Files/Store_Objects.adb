@@ -70,5 +70,28 @@ package body Store_Objects is
       Self.tag := Value;
    end Set_tag;
         
+   function To_JSON (Self : Product) return GNATCOLL.JSON.JSON_Value'Class is
+      J : GNATCOLL.JSON.JSON_Object := GNATCOLL.JSON.Create_Object;
+   begin
+      J.Set_Field ("id", GNATCOLL.JSON.To_JSON (Self.id));
+      J.Set_Field ("name", GNATCOLL.JSON.Create_String (To_Unbounded_String (Self.name)));
+      J.Set_Field ("price", GNATCOLL.JSON.To_JSON (Self.price));
+      -- Array serialization needs custom handling based on array content type
+      J.Set_Field ("manufacturers", GNATCOLL.JSON.To_JSON (Your_Array_To_JSON_Function (Self.manufacturers)));
+      J.Set_Field ("in_stock", GNATCOLL.JSON.To_JSON (Self.in_stock));
+      J.Set_Field ("tag", GNATCOLL.JSON.To_JSON (GNATCOLL.JSON.Create_String (To_String (Self.tag))));
+      return GNATCOLL.JSON.JSON_Value'Class (J);
+   end To_JSON;
+   procedure From_JSON (Self : out Product; J : GNATCOLL.JSON.JSON_Value'Class) is
+      Obj : GNATCOLL.JSON.JSON_Object := GNATCOLL.JSON.To_Object (J);
+   begin
+      Self.id := GNATCOLL.JSON.Get_Integer (Obj.Get_Field ("id"));
+      Self.name := To_String (GNATCOLL.JSON.Get_Unbounded_String (Obj.Get_Field ("name")));
+      Self.price := GNATCOLL.JSON.Get_Number (Obj.Get_Field ("price"));
+      -- Array deserialization needs custom handling based on array content type
+      Your_JSON_To_Array_Function (Obj.Get_Field ("manufacturers"), Self.manufacturers);
+      Self.in_stock := GNATCOLL.JSON.Get_Boolean (Obj.Get_Field ("in_stock"));
+      Self.tag := To_tags (GNATCOLL.JSON.Get_String (Obj.Get_Field ("tag")));
+   end From_JSON;
 
 end Store_Objects;

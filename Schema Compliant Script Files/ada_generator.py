@@ -8,7 +8,11 @@ package {package_name} is
 
    {enum_definitions}
 
+   -- Public subprograms including getters, setters, and serialization/deserialization functions
    {public_subprograms}
+
+   function To_JSON (Self : {class_name}) return GNATCOLL.JSON.JSON_Value'Class;
+   procedure From_JSON (Self : out {class_name}; J : GNATCOLL.JSON.JSON_Value'Class);
 
 private
    {private_types}
@@ -78,6 +82,63 @@ def generate_body_subprograms(class_name, fields, enums):
         ''')
     return '\n'.join(subprograms)
 
+def generate_serialization_subprograms(class_name, fields):
+    serialization_procedures = f'''
+   function To_JSON (Self : {class_name}) return GNATCOLL.JSON.JSON_Value'Class is
+      J : GNATCOLL.JSON.JSON_Object := GNATCOLL.JSON.Create_Object;
+   begin'''
+    for field_name, field_def in fields:
+        field_type = field_def.get('type')
+        if field_type == 'enum':
+            serialization_procedures += f'''
+      J.Set_Field ("{field_name}", GNATCOLL.JSON.To_JSON (GNATCOLL.JSON.Create_String (To_String (Self.{field_name}))));'''
+        elif field_type in ['integer', 'number']:
+            serialization_procedures += f'''
+      J.Set_Field ("{field_name}", GNATCOLL.JSON.To_JSON (Self.{field_name}));'''
+        elif field_type == 'string':
+            serialization_procedures += f'''
+      J.Set_Field ("{field_name}", GNATCOLL.JSON.Create_String (To_Unbounded_String (Self.{field_name})));'''
+        elif field_type == 'boolean':
+            serialization_procedures += f'''
+      J.Set_Field ("{field_name}", GNATCOLL.JSON.To_JSON (Self.{field_name}));'''
+        elif field_type == 'array':
+            serialization_procedures += f'''
+      -- Array serialization needs custom handling based on array content type
+      J.Set_Field ("{field_name}", GNATCOLL.JSON.To_JSON (Your_Array_To_JSON_Function (Self.{field_name})));'''
+    serialization_procedures += '''
+      return GNATCOLL.JSON.JSON_Value'Class (J);
+   end To_JSON;'''
+
+    return serialization_procedures
+
+def generate_deserialization_subprograms(class_name, fields):
+    deserialization_procedures = f'''
+   procedure From_JSON (Self : out {class_name}; J : GNATCOLL.JSON.JSON_Value'Class) is
+      Obj : GNATCOLL.JSON.JSON_Object := GNATCOLL.JSON.To_Object (J);
+   begin'''
+    for field_name, field_def in fields:
+        field_type = field_def.get('type')
+        if field_type == 'enum':
+            deserialization_procedures += f'''
+      Self.{field_name} := To_{field_def['enumname']} (GNATCOLL.JSON.Get_String (Obj.Get_Field ("{field_name}")));'''
+        elif field_type in ['integer', 'number']:
+            deserialization_procedures += f'''
+      Self.{field_name} := GNATCOLL.JSON.Get_{field_type.capitalize()} (Obj.Get_Field ("{field_name}"));'''
+        elif field_type == 'string':
+            deserialization_procedures += f'''
+      Self.{field_name} := To_String (GNATCOLL.JSON.Get_Unbounded_String (Obj.Get_Field ("{field_name}")));'''
+        elif field_type == 'boolean':
+            deserialization_procedures += f'''
+      Self.{field_name} := GNATCOLL.JSON.Get_Boolean (Obj.Get_Field ("{field_name}"));'''
+        elif field_type == 'array':
+            deserialization_procedures += f'''
+      -- Array deserialization needs custom handling based on array content type
+      Your_JSON_To_Array_Function (Obj.Get_Field ("{field_name}"), Self.{field_name});'''
+    deserialization_procedures += '''
+   end From_JSON;'''
+
+    return deserialization_procedures
+
 def generate_code_from_spec(spec):
     # Extract enums and required fields
     enums = {f['enumname']: f['enum'] for _, f in spec['properties'].items() if f.get('type') == 'enum'}
@@ -89,6 +150,11 @@ def generate_code_from_spec(spec):
     private_types = '\n   '.join([generate_field_declaration(f[0], f[1], required_fields) for f in fields])
     public_subprograms = generate_public_subprograms(spec['class_name'], fields, enums)
     body_subprograms = generate_body_subprograms(spec['class_name'], fields, enums)
+
+    serialization_code = generate_serialization_subprograms(spec['class_name'], [(name, defn) for name, defn in spec['properties'].items()])
+    deserialization_code = generate_deserialization_subprograms(spec['class_name'], [(name, defn) for name, defn in spec['properties'].items()])
+
+    body_subprograms += serialization_code + deserialization_code
 
     # Fill in templates
     ads_code = ads_template.format(
